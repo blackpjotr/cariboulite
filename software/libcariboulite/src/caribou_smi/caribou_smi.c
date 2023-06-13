@@ -146,6 +146,23 @@ static int caribou_smi_setup_settings (caribou_smi_st* dev, struct smi_settings 
         ZF_LOGE("failed writing ioctl to the smi fd (settings)");
         return -1;
     }
+    
+    // set the address line parameters
+    int address_dir_offset = 2;
+    if (ioctl(dev->filedesc, SMI_STREAM_IOC_SET_ADDR_DIR_OFFSET, address_dir_offset) != 0)
+    {
+        ZF_LOGE("failed writing ioctl to the smi fd (address_dir_offset)");
+        return -1;
+    }
+    
+    // set the address line parameters
+    int address_channel_offset = 3;
+    if (ioctl(dev->filedesc, SMI_STREAM_IOC_SET_ADDR_CH_OFFSET, address_channel_offset) != 0)
+    {
+        ZF_LOGE("failed writing ioctl to the smi fd (address_channel_offset)");
+        return -1;
+    }
+    
     return 0;
 }
 
@@ -286,7 +303,10 @@ static int caribou_smi_rx_data_analyze(caribou_smi_st* dev,
 
     // find the offset and adjust
     offs = caribou_smi_find_buffer_offset(dev, data, data_length);
-    //printf("OFFSET = %d\n", offs);
+    if (offs > 0)
+    {
+        //printf("OFFSET = %d\n", offs);
+    }
     if (offs < 0)
     {
         return -1;
@@ -548,6 +568,7 @@ int caribou_smi_init(caribou_smi_st* dev,
     memset(&dev->debug_data, 0, sizeof(caribou_smi_debug_data_st));
 
     dev->debug_mode = caribou_smi_none;
+    dev->invert_iq = false;
     dev->initialized = 1;
 
     return 0;
@@ -568,6 +589,12 @@ int caribou_smi_close (caribou_smi_st* dev)
 void caribou_smi_set_debug_mode(caribou_smi_st* dev, caribou_smi_debug_mode_en mode)
 {
     dev->debug_mode = mode;
+}
+
+//=========================================================================
+void caribou_smi_invert_iq(caribou_smi_st* dev, bool invert)
+{
+    dev->invert_iq = invert;
 }
 
 //=========================================================================

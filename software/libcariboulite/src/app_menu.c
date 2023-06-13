@@ -311,7 +311,9 @@ static void modem_tx_cw(sys_st *sys)
 			case 5:
 			{
 				state_lo = !state_lo;
+                cariboulite_radio_set_cw_outputs(radio_low, false, state_lo);
 				cariboulite_radio_activate_channel(radio_low, cariboulite_channel_dir_tx, state_lo);
+                
 				//printf("	Power output was %s\n\n", state_lo?"ENABLED":"DISABLED");
 				if (state_lo == 1) cariboulite_radio_set_tx_power(radio_low, current_power_lo);
 			}
@@ -321,6 +323,7 @@ static void modem_tx_cw(sys_st *sys)
 			case 6: 
 			{
 				state_hi = !state_hi;
+                cariboulite_radio_set_cw_outputs(radio_hi, false, state_hi);
 				cariboulite_radio_activate_channel(radio_hi, cariboulite_channel_dir_tx, state_hi);
 				//printf("	Power output was %s\n\n", state_hi?"ENABLED":"DISABLED");
 				if (state_hi == 1) cariboulite_radio_set_tx_power(radio_hi, current_power_hi);
@@ -356,6 +359,8 @@ typedef struct
 static void print_iq(char* prefix, caribou_smi_sample_complex_int16* buffer, size_t num_samples, int num_head_tail)
 {
     int i;
+    
+    if (num_samples == 0) return;
     
     for (i = 0; i < num_head_tail; i++)
     {

@@ -666,6 +666,7 @@ int cariboulite_radio_set_frequency(cariboulite_radio_state_st* radio,
         if (f_rf_mod_26 > 13e6) f_rf_mod_26 = 26e6 - f_rf_mod_26;
         ext_ref_choice = f_rf_mod_32 > f_rf_mod_26 ? cariboulite_ext_ref_32mhz : cariboulite_ext_ref_26mhz;
         cariboulite_radio_ext_ref (radio->sys, ext_ref_choice);
+        rffc507x_calibrate(&radio->sys->mixer);
 
         // Decide the conversion direction and IF/RF/LO
         //-------------------------------------
@@ -678,12 +679,13 @@ int cariboulite_radio_set_frequency(cariboulite_radio_state_st* radio,
 																at86rf215_rf_channel_2400mhz, 
 																modem_freq);
             
-            // setup mixer LO according to the actual modem frequency
-			lo_act_freq = rffc507x_set_frequency(&radio->sys->mixer, modem_act_freq + f_rf);
-			act_freq = lo_act_freq - modem_act_freq;
+            // setup mixer LO according to the actual modem frequency          
+			lo_act_freq = rffc507x_set_frequency(&radio->sys->mixer, modem_act_freq - f_rf);
+			act_freq = modem_act_freq - lo_act_freq;
 
             // setup fpga RFFE <= upconvert (tx / rx)
             conversion_direction = conversion_dir_up;
+            caribou_smi_invert_iq(&radio->sys->smi, true);
         }
         //-------------------------------------
         else if ( f_rf >= CARIBOULITE_2G4_MIN && 
@@ -698,6 +700,7 @@ int cariboulite_radio_set_frequency(cariboulite_radio_state_st* radio,
             lo_act_freq = 0;
             act_freq = modem_act_freq;
             conversion_direction = conversion_dir_none;
+            caribou_smi_invert_iq(&radio->sys->smi, true);
         }
         //-------------------------------------
         else if ( f_rf >= (CARIBOULITE_2G4_MAX) && 
@@ -715,6 +718,7 @@ int cariboulite_radio_set_frequency(cariboulite_radio_state_st* radio,
 
             // setup fpga RFFE <= downconvert (tx / rx)
             conversion_direction = conversion_dir_down;
+            caribou_smi_invert_iq(&radio->sys->smi, true);
         }
         //-------------------------------------
         else
@@ -904,7 +908,7 @@ int cariboulite_radio_activate_channel(cariboulite_radio_state_st* radio,
             .loopback_enable = 0,
             .drv_strength = at86rf215_iq_drive_current_4ma,
             .common_mode_voltage = at86rf215_iq_common_mode_v_ieee1596_1v2,
-            .tx_control_with_iq_if = true,
+            .tx_control_with_iq_if = !radio->cw_output,
             .radio09_mode = at86rf215_iq_if_mode,
             .radio24_mode = at86rf215_iq_if_mode,
             .clock_skew = at86rf215_iq_clock_data_skew_4_906ns,
@@ -960,15 +964,6 @@ int cariboulite_radio_set_cw_outputs(cariboulite_radio_state_st* radio, bool lo_
         radio->lo_output = false;
     }
     radio->cw_output = cw_out;
-
-    if (cw_out)
-    {
-        radio->channel_direction = cariboulite_channel_dir_tx;
-    }
-    else
-    {
-        radio->channel_direction = cariboulite_channel_dir_rx;
-    }
 
     return 0;
 }
